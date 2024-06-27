@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      {{ .Title }}
+    </title>
+    <meta name="description" content="{{ .Description }}" />
+    {{/* Build and load CSS in defer to pick up build_stats.json changes from the build. */}}
+    {{ with (templates.Defer (dict "key" "global")) }}
+      {{ $t := debug.Timer "tailwindcss" }}
+      {{ with resources.Get "css/styles.css" }}
+        {{ $opts := dict
+          "inlineImports" true
+          "optimize" (not hugo.IsDevelopment)
+        }}
+        {{ with . | css.TailwindCSS $opts }}
+          {{ if hugo.IsDevelopment }}
+            <link rel="stylesheet" href="{{ .RelPermalink }}" />
+          {{ else }}
+            {{ with . | minify | fingerprint }}
+              <link
+                rel="stylesheet"
+                href="{{ .RelPermalink }}"
+                integrity="{{ .Data.Integrity }}"
+                crossorigin="anonymous" />
+            {{ end }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+      {{ $t.Stop }}
+    {{ end }}
+    {{/* Build and load JS. */}}
+    {{ with resources.Get "js/main.js" }}
+      {{ $opts := dict
+        "minify" (not hugo.IsDevelopment)
+      }}
+      {{ with . | js.Build $opts }}
+        {{ if hugo.IsDevelopment }}
+          <script src="{{ .RelPermalink }}"></script>
+        {{ else }}
+          {{ with . | fingerprint }}
+            <script
+              src="{{ .RelPermalink }}"
+              integrity="{{ .Data.Integrity }}"
+              crossorigin="anonymous"
+              defer></script>
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  </head>
+  <body class="my-10">
+    {{ block "main" . }}{{ end }}
+  </body>
+</html>
